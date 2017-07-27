@@ -53,6 +53,13 @@ class Alert:
         ''')
         conn.commit()
 
+    def insert(self, alert):
+        conn, cur = config.mysql_conn, config.mysql_cur
+        cur.execute('SELECT COUNT(*) FROM alerts WHERE label_id={label_id} AND victim_id={victim_id} AND NOW()-end_at<3600')
+
+        cur.execute('INSERT INTO ')
+        return cur.fetchall()
+
 
 class Rule:
 
@@ -93,6 +100,12 @@ class Agent:
         ''')
         conn.commit()
 
+    def get(self):
+        conn, cur = config.mysql_conn, config.mysql_cur
+        cur.execute('SELECT id, agent_name FROM `agents`')
+        return cur.fetchall()
+
+
 
 class Log:
 
@@ -100,7 +113,7 @@ class Log:
         self.wasl = Wasl(config.es)
 
     def get(self, wasl_query):
-        pprint(self.wasl.wasl2elasticsearch(wasl_query))
+        # pprint(self.wasl.wasl2elasticsearch(wasl_query))
         for item in self.wasl.scroll(wasl_query):
             print(item)
 
@@ -114,12 +127,12 @@ def reset_database():
 
 
 if __name__ == '__main__':
-    reset_database()
+    # reset_database()
 
-    Agent().migrate()
-    Label().migrate()
-    Alert().migrate()
-    Rule().migrate()
+    # Agent().migrate()
+    # Label().migrate()
+    # Alert().migrate()
+    # Rule().migrate()
 
-    # L = Log()
-    # L.get('url="a"')
+    L = Log()
+    L.get('a')
