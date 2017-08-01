@@ -3,8 +3,14 @@ from elasticsearch import helpers
 from pprint import pprint
 import traceback
 from wasl import Wasl
+import time
 config = Config()
 
+def time_forward(str_t):
+    return time.mktime(time.strptime(str_t, '%Y-%m-%d %H:%M:%S'))
+
+def time_backward(t):
+    return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(t))
 
 class Label:
 
@@ -16,10 +22,10 @@ class Label:
         cur.execute('''
             CREATE TABLE IF NOT EXISTS `labels` (
                 id int(11) PRIMARY KEY NOT NULL AUTO_INCREMENT,
-                name TEXT,
-                description TEXT,
+                name nvarchar(1024),
+                description nvarchar(1024),
                 severity int(11),
-                reference TEXT
+                reference nvarchar(1024)
             )
         ''')
         conn.commit()
@@ -42,12 +48,12 @@ class Alert:
                 `id` int(11) PRIMARY KEY NOT NULL AUTO_INCREMENT,
                 `label_id` int(11),
                 `victim_id` int(11),
-                `type` TEXT,
+                `type` nvarchar(1024),
                 `false_positive` tinyint(1),
                 `start_at` timestamp,
                 `end_at` timestamp,
-                `attacker` TEXT,
-                `screenshot` TEXT,
+                `attacker` nvarchar(1024),
+                `screenshot` nvarchar(1024),
                 FOREIGN KEY (label_id) REFERENCES labels(id)
             )
         ''')
@@ -55,11 +61,21 @@ class Alert:
 
     def insert(self, alert):
         conn, cur = config.mysql_conn, config.mysql_cur
-        cur.execute('SELECT COUNT(*) FROM alerts WHERE label_id={label_id} AND victim_id={victim_id} AND NOW()-end_at<3600')
-
-        cur.execute('INSERT INTO ')
-        return cur.fetchall()
-
+        cur.execute('SELECT id, attacker, end_at FROM alerts GROUP BY end_at DESC LIMIT 1')
+        row = cur.fetchone()
+        if row:
+            id, attacker, end_at = row
+            alert['attacker'] = ','.join(set(attacker.split(',')+alert['attacker'].split(',')))
+            alert['id'] = id
+            if time_forward(alert['end_at']) - time_forward(str(end_at)) < 3600:
+                cur.execute('UPDATE alerts SET end_at=\'{end_at}\', attacker=\'{attacker}\' WHERE id=\'{id}\''.format(**alert)) 
+            else:
+                cur.execute('''INSERT INTO alerts (label_id, victim_id, type, false_positive, start_at, end_at, attacker) 
+                    VALUES ({label_id}, {victim_id}, \'{type}\', {false_positive}, \'{start_at}\', \'{end_at}\', \'{attacker}\')'''.format(**alert)) 
+        else:
+            cur.execute('''INSERT INTO alerts (label_id, victim_id, type, false_positive, start_at, end_at, attacker) 
+                VALUES ({label_id}, {victim_id}, \'{type}\', {false_positive}, \'{start_at}\', \'{end_at}\', \'{attacker}\')'''.format(**alert)) 
+        conn.commit()
 
 class Rule:
 
@@ -72,8 +88,8 @@ class Rule:
             CREATE TABLE IF NOT EXISTS `rules` (
                 id int(11) PRIMARY KEY NOT NULL AUTO_INCREMENT,
                 label_id int(11),
-                wasl_query TEXT,
-                tag TEXT,
+                wasl_query nvarchar(1024),
+                tag nvarchar(1024),
                 FOREIGN KEY (label_id) REFERENCES labels(id)
             )
         ''')
@@ -95,7 +111,7 @@ class Agent:
         cur.execute('''
             CREATE TABLE IF NOT EXISTS `agents` (
                 id int(11) PRIMARY KEY NOT NULL AUTO_INCREMENT,
-                agent_name TEXT
+                agent_name nvarchar(1024)
             )
         ''')
         conn.commit()
@@ -128,11 +144,8 @@ def reset_database():
 
 if __name__ == '__main__':
     # reset_database()
-
     # Agent().migrate()
-    # Label().migrate()
-    # Alert().migrate()
-    # Rule().migrate()
-
-    L = Log()
-    L.get('a')
+    Label().migrate()
+    Alert().migrate()
+    Rule().migrate()
+    # pass

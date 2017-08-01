@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 import re, json
-from elasticsearch import helpers
+from elasticsearch import helpers, Elasticsearch
 from pprint import pprint
 
 class Wasl: # WASL: WebAssistant Searching language
@@ -231,3 +231,4 @@ class Wasl: # WASL: WebAssistant Searching language
 		if end_at:
 			commandQuery["query"]["bool"]["must"].append({"range" : {"arrived_time" : {"lt":end_at}}})
 		return commandQuery
+

@@ -14,7 +14,7 @@ class Config:
     def reload(self):
         # MySQL
         self.mysql_conn = pymysql.connect(
-            host=HOST, user='root', password='vnistadmin', db='webassistant3', charset='utf8mb4')
+            host=HOST, user='root', password='vnistadmin', db='webix', charset='utf8mb4')
         self.mysql_cur = self.mysql_conn.cursor()
 
         # ElasticSearch
